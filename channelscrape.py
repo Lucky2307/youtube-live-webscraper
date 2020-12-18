@@ -22,7 +22,6 @@ class ChannelScrape:
 
 
     def __init__(self, channelId: str, headless = True, executable_path = None):
-        start = time.time()
         # Searches for webdriver on each dir from PATH environment variables
         # Currently untested in linux
         if executable_path == None:
