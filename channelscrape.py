@@ -1,10 +1,13 @@
 import codecs, json
 import os
 
+import time
+
 from datetime import date, datetime, timedelta
 from time import mktime, gmtime
 from msedge.selenium_tools import Edge, EdgeOptions
 
+print('tis i imported')
 class ChannelScrape:
     """
     Constructors:
@@ -23,6 +26,7 @@ class ChannelScrape:
 
 
     def __init__(self, channelId: str, headless = True, executable_path = None):
+        start = time.time()
         # Searches for webdriver on each dir from PATH environment variables
         # Currently untested in linux
         if executable_path == None:
@@ -33,6 +37,7 @@ class ChannelScrape:
         # Setup driver
         self.options_edge.headless = headless
         self.driver = Edge(options=self.options_edge, executable_path=self.path_dir)
+        print('Init time: ' + str(time.time() - start))
 
         # JSON collecting process
         url = 'https://www.youtube.com/channel/' + channelId
@@ -62,15 +67,18 @@ class ChannelScrape:
         # Which is then counted to the used date by seconds
         dateFilter=timedelta(days=dayDelta)
         dateThreshold = datetime.now() + dateFilter
-
-        content = self.jsonData['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][1]['itemSectionRenderer']['contents'][0]['shelfRenderer']['content']
         collectedContents = []
+        try:
+            content = self.jsonData['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][1]['itemSectionRenderer']['contents'][0]['shelfRenderer']['content']
+        except:
+            print('Index out of range (Most likely channel only have horizontal grid renderer)')
+            return collectedContents
         # Only one upcoming livestream
         # This shouldn't need to use for loop assuming that there is always one item in items key
         # But items is still an array, so just in case
         if "expandedShelfContentsRenderer" in content:
             for item in content['expandedShelfContentsRenderer']['items']:
-                liveDateEpoch = item['videoRenderer']['upcomingEventData']['startTime']
+                liveDateEpoch = int(item['videoRenderer']['upcomingEventData']['startTime'])
                 liveDate = datetime.fromtimestamp(mktime(gmtime(liveDateEpoch)))
                 if item['videoRenderer']['thumbnailOverlays'][0]['thumbnailOverlayTimeStatusRenderer']['style'] == "UPCOMING" and liveDate < dateThreshold:
                     collectedContents.append(item['videoRenderer']['videoId'])
@@ -78,10 +86,11 @@ class ChannelScrape:
         # Multiple upcoming livestreams
         elif "horizontalListRenderer" in content:
             for item in content['horizontalListRenderer']['items']:
-                liveDateEpoch = item['videoRenderer']['upcomingEventData']['startTime']
-                liveDate = datetime.fromtimestamp(mktime(gmtime(liveDateEpoch)))
-                if item['gridVideoRenderer']['thumbnailOverlays'][0]['thumbnailOverlayTimeStatusRenderer']['style'] == "UPCOMING" and liveDate < dateThreshold:
-                    collectedContents.append(item['gridVideoRenderer']['videoId'])
+                if 'upcomingEventData' in item['gridVideoRenderer']:
+                    liveDateEpoch = int(item['gridVideoRenderer']['upcomingEventData']['startTime'])
+                    liveDate = datetime.fromtimestamp(mktime(gmtime(liveDateEpoch)))
+                    if item['gridVideoRenderer']['thumbnailOverlays'][0]['thumbnailOverlayTimeStatusRenderer']['style'] == "UPCOMING" and liveDate < dateThreshold:
+                        collectedContents.append(item['gridVideoRenderer']['videoId'])
 
         return collectedContents
     
