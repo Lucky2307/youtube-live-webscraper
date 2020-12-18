@@ -1,13 +1,9 @@
 import codecs, json
 import os
-
-import time
-
 from datetime import date, datetime, timedelta
 from time import mktime, gmtime
 from msedge.selenium_tools import Edge, EdgeOptions
 
-print('tis i imported')
 class ChannelScrape:
     """
     Constructors:
@@ -37,7 +33,6 @@ class ChannelScrape:
         # Setup driver
         self.options_edge.headless = headless
         self.driver = Edge(options=self.options_edge, executable_path=self.path_dir)
-        print('Init time: ' + str(time.time() - start))
 
         # JSON collecting process
         url = 'https://www.youtube.com/channel/' + channelId
